@@ -1,0 +1,8 @@
+[
+  {"id":"P01","name":"铅笔套装","category":"文具","price":39,"stock":12},
+  {"id":"P02","name":"点阵手账","category":"文具","price":68,"stock":5},
+  {"id":"P03","name":"钢笔","category":"文具","price":129,"stock":3},
+  {"id":"B01","name":"城市散步集","category":"图书","price":59,"stock":8},
+  {"id":"B02","name":"植物观察簿","category":"图书","price":88,"stock":0},
+  {"id":"H01","name":"陶瓷杯","category":"生活","price":99,"stock":4}
+]

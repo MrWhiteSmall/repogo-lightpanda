@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>纸间小铺 · 原创本地练习</title><style>
+*{box-sizing:border-box}body{font:18px/1.65 system-ui,sans-serif;margin:0;background:#f6f1e8;color:#27251e}main{max-width:980px;margin:60px auto;padding:24px}header{border-bottom:2px solid #b78547;padding-bottom:24px}small{color:#725b3b}h1{font:600 48px/1.2 Georgia,serif;margin:12px 0}label{display:inline-grid;gap:6px;margin:20px 20px 20px 0}input,select,button{font:inherit;padding:10px;border:1px solid #b8a78a;border-radius:6px}button{background:#3f5947;color:white;cursor:pointer}table{width:100%;border-collapse:collapse;background:#fffdf8}td,th{text-align:left;padding:16px;border-bottom:1px solid #e5dccd}#status{font-weight:600;color:#3f5947}.notice{border-left:3px solid #b78547;padding-left:16px}footer{margin-top:30px;color:#6b6358;font-size:14px}@media(max-width:600px){main{margin:16px auto;padding:16px}h1{font-size:34px}td,th{padding:10px;font-size:14px}label{margin-right:8px}input{width:120px}}
+</style><main><header><small>REPOGO / 原创虚构商品，不涉及真实交易</small><h1>纸间小铺</h1><p>想找 100 元以内、确实有货的文具？让页面筛选，再把结果取走。</p></header>
+<label>商品分类<select id="category"><option value="全部">全部</option><option value="文具">文具</option><option value="图书">图书</option><option value="生活">生活</option></select></label>
+<label>预算上限 / 元<input id="budget" type="number" min="0" value="100"></label><button id="apply" type="button">筛选有货商品</button>
+<p id="status" data-state="loading">商品加载中……</p><table><thead><tr><th>商品</th><th>分类</th><th>价格 / 元</th><th>库存 / 件</th></tr></thead><tbody id="products"></tbody></table>
+<p class="notice">这里的商品行由页面脚本读取本地数据后创建；源 HTML 没有预先写入商品行。筛选发生在页面里。</p><footer>Lightpanda 执行脚本并提取内容；本页由 RepoGo 原创。它不负责商品数据真假判断，也不代表真实商城兼容性通过。</footer></main>
+<script>
+let catalog=[];
+function render(rows,label){const root=document.getElementById('products');root.replaceChildren();for(const p of rows){const tr=document.createElement('tr');tr.className='product';tr.dataset.id=p.id;for(const key of ['name','category','price','stock']){const td=document.createElement('td');td.className=key;td.textContent=String(p[key]);tr.appendChild(td)}root.appendChild(tr)}const status=document.getElementById('status');status.textContent=`${label}：${rows.length} 件`;status.dataset.state='ready'}
+document.getElementById('apply').addEventListener('click',()=>{const category=document.getElementById('category').value;const budget=Number(document.getElementById('budget').value);render(catalog.filter(p=>(category==='全部'||p.category===category)&&p.price<=budget&&p.stock>0),`预算 ${budget} 元 · ${category} · 有货`)});
+fetch('/catalog.json').then(r=>r.json()).then(rows=>{catalog=rows;render(rows,'已加载全部商品')}).catch(()=>{document.getElementById('status').textContent='加载失败，请查看本地数据文件';document.getElementById('status').dataset.state='error'});
+</script></html>
