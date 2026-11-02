@@ -1,37 +1,40 @@
-# 系统入口、固定快照与工作机制
+# 固定版本、启动与系统边界
 
-## 支持与实测分开记录
+## 本期升级
 
-| 系统 | 上游发行形式 | 本轮情况 | 入口 |
-|---|---|---|---|
-| macOS Apple Silicon | aarch64-macos | 已实测四轮动态筛选和提取，Python 3.9.6 | `bash start.sh` 或 `bash start.command` |
-| macOS Intel | x86_64-macos | 官方包与摘要已整理，未实测 | `bash start.sh` |
-| Linux x64 | x86_64-linux，glibc | shenji Slurm 四轮动态筛选/提取和端口关闭通过；Python 3.10.12 | `bash start.sh` |
-| Linux ARM64 | aarch64-linux，glibc | 官方包与摘要已整理，未实测 | `bash start.sh` |
-| Windows | 无原生包，官方建议 WSL2 | WSL2 未实测；Windows ARM/仿真均不据此通过 | 已有 WSL2 内运行 `bash start.sh` |
+2026-11-02改用官方固定版Lightpanda **1.0.2**，发行于2026-10-23。run.py锁定四种官方发行资产的SHA-256；摘要在执行前从官方GitHub发行API核对。固定页：https://github.com/lightpanda-io/browser/releases/tag/1.0.2 。此前nightly验证保留为历史记录，不冒充当前版本成绩。
 
-Alpine/musl、Android/Termux 不属于这些 glibc Linux 包的直接适用对象。入口不会自动修改执行策略、安装 WSL、启动虚拟机或改系统设置。Mac 解压后双击 `.command` 的体验受本机终端和文件权限影响，保底使用终端 `bash start.sh`。
+固定版本减少滚动发行换包导致的下载变化，不能保证官方文件永远在线。每次执行仍校验摘要及version输出，变化时停止，不绕过校验。已有nightly缓存应先移到自己的历史备份目录，再运行；不要修改预期摘要强行接受旧缓存。
 
-上游固定快照版本：`1.1.0-nightly.11423+56980afde`。官方 nightly 下载页 https://github.com/lightpanda-io/browser/releases/tag/nightly ，本次资产观察日期 2026-11-01（北京时间），资产更新时间为 2026-10-31。四架构摘要在 `run.py` ASSETS 中，来自该页，不是从任意下载包反向补填。Mac ARM SHA-256：
+## 两条入口
 
-```text
-273a4659510f8c48e6c5f26a2eee6aa20051632210cbf0f59975ac705056c44f
-```
+Python3.9+，可写目录，首次联网下载官方文件。Mac ARM约89MiB。无pip依赖、无GPU、无Docker、无模型账号或API Key。
 
-该页旧 nightly 标签指向的 `8ec22ca...` 是历史标签，不是本次二进制构建提交证明。版本后缀记录的是二进制自己报告的构建标识，本期未核实其完整源码提交。未来滚动文件摘要不符会失败关闭，不能称永久复现；需要重新核验版本、摘要、功能后发布新的包，不能只改摘要放行。
+- 商品筛选：`bash start.sh`，成功显示“提取成功：2件”，查看`.runtime/results/latest/result.json`。
+- 动态帮助页：`python3 export_help.py`，成功输出`.runtime/results/help/help.md`路径，内含三条问答。
+- 手动预览商品页：`bash start.sh --serve-only`，常规浏览器打开当次终端地址，Ctrl+C停止。此模式不运行Lightpanda。
 
-## 运行链路
+商品入口使用原生PandaScript操作；帮助入口使用官方`fetch --dump markdown --wait-selector`。Python包装负责下载、校验、临时服务与保存结果，不制造浏览器输出。遥测和核心转储在这些运行中关闭。没有使用外部商城、cookie、凭据、订单或交易。
 
-Python 标准库把 `site/index.html` 与本次指定商品数据暴露在一个仅 `127.0.0.1` 的临时随机端口；别的路径返回 404。HTML 初始没有商品行，页面通过 `fetch('/catalog.json')` 读取数据，用 JavaScript 创建 6 行商品。筛选按钮的页面事件处理器按分类、预算和库存重新生成行。
+每次普通任务结束自动关闭临时回环服务和浏览器进程；重新运行会开新端口。输入与保留结果需自行备份，同名`--output`目录会覆盖报告。帮助页自定义数据用`python3 export_help.py --data my-help.json --output my-help`。
 
-Lightpanda 用官方 native PandaScript：`new Page()` → `goto` → `waitForScript` 等状态为 ready → `selectOption` 选分类 → `fill` 填预算 → `click` 触发页面事件 → `extract` 按 CSS 选择器取字段。CSS 选择器在这里是定位页面元素的规则，例如 `.product .price` 表示每条商品行中的价格。
+## 对应系统实际结果
 
-Python 负责启动服务、校验下载、保存报告、比较输入输出与关闭进程；页面负责筛选；Lightpanda 负责执行页面脚本、派发交互事件与提取 DOM（浏览器里的文档结构）。因此不会把 Python 自己算出的筛选列表冒充浏览器提取结果。
+| 系统 | 本期状态 |
+|---|---|
+| macOS ARM64 | Python3.12.14，固定1.0.2商品4轮、帮助3轮全部通过 |
+| shenji Linux x86_64 | Python3.10.12，Slurm226980，同7轮全部通过；0GPU |
+| Intel Mac / Linux ARM64 | 有官方资产，本期未实跑 |
+| Windows / WSL2 | 无原生Windows发行；已配置WSL2可参照Linux，但本期未实跑 |
 
-本期使用固定脚本，不调用模型。官方还提供 CDP、MCP、Agent 模式，未在本轮验证。它没有传统完整图形渲染引擎，其截图是文字布局输出，不适合拿来证明网页视觉一致。文档页面图是 Edge 对同一原创练习的展示，和 Lightpanda 的 JSON 证据分开。
+Linux作业2026-11-02北京时间09:26:05—09:26:15，slurm-compute73，2CPU/2GiB/5分钟上限，未请求GPU。官方Linux文件在本机先下载校验，再同步至独立共享工作目录；计算节点冷下载未测。glibc的Linux包不代表musl/Alpine兼容。
 
-上游默认有遥测。本入口每次设置 `LIGHTPANDA_DISABLE_TELEMETRY=true`、`LIGHTPANDA_DISABLE_CORE_DUMP=1`，不导入个人浏览器资料、不加载 Cookie、不使用平台登录与 API 凭据。首次下载官方文件仍需联网，本地核心练习不访问第三方网站。不能把本样例成功推广为任意网站、验证码或登录流程都兼容。
+商品4轮：预算100→2件、150→3件、手账改价68→108后100→1件、恢复原数据再启动→2件；帮助3轮：原始3条、改首条答案、新导出恢复原输入。均检查原输入未被覆盖、输出正确、临时端口关闭。
 
-## Linux 独立补测（2026-11-01）
+未验证任意第三方网站、登录验证码、模型/MCP/CDP集成、视觉截图一致性、性能倍数或云托管。修改上游、分发或对外托管另需核对AGPL义务。本仓库与附件不带上游程序、下载缓存和运行日志。
 
-Slurm 作业 224656，节点 slurm-compute73，slurm-2080ti 分区申请 2 CPU、2GB 内存，未申请/使用 GPU。02:28:27–02:28:32（北京时间），官方 Linux x64 二进制同版本、SHA-256 为 `19f3fee25fb14bb75a1e0c1e0f8ab9cce842950544e4a144fbad3884c94b98a3`。100/150预算、手账改价、恢复原数据重启四轮及端口关闭均通过。服务器直连官方下载过慢，改为本机从官方下载并校验后同步到独立共享目录，计算节点首次冷下载未测；不因此宣称在任何Linux上可无障碍下载。未修改其他作业或使用已有GPU。
+## 停止、备份、更新
+
+普通命令会自动结束；若手工预览则Ctrl+C。备份你自己的catalog.json、help.json及需要保留的.runtime/results输出。重跑可使用不同--output名称避免覆盖。
+
+升级另建目录，先查新发行、许可、资产摘要，完成商品与帮助场景验证后再迁移；不要把新版程序塞进旧缓存并沿用通过结论。当前脚本摘要不符时主动停止，是保护运行一致性而不是提示你跳过检查。

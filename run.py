@@ -4,22 +4,22 @@ import argparse,datetime,hashlib,http.server,json,os,pathlib,platform,shutil,sub
 ROOT=pathlib.Path(__file__).resolve().parent
 RUNTIME=ROOT/'.runtime'
 ASSETS={
- ('Darwin','arm64'):('lightpanda-aarch64-macos','273a4659510f8c48e6c5f26a2eee6aa20051632210cbf0f59975ac705056c44f'),
- ('Darwin','x86_64'):('lightpanda-x86_64-macos','35733281cd3ce96070c5c9ce101efd35c9cabd94ab02eea125ad894933abf293'),
- ('Linux','x86_64'):('lightpanda-x86_64-linux','19f3fee25fb14bb75a1e0c1e0f8ab9cce842950544e4a144fbad3884c94b98a3'),
- ('Linux','aarch64'):('lightpanda-aarch64-linux','97710997faea70bb0f22f9b07ba3a9701b47dbb6a71f679150b040e70c565cf3')}
-VERSION='1.1.0-nightly.11423+56980afde'
+ ('Darwin','arm64'):('lightpanda-aarch64-macos','9f3ee749a55d1abc5f8fdda0d9559c3b2abcec5bff5bfe902bc06c0a89538ec4'),
+ ('Darwin','x86_64'):('lightpanda-x86_64-macos','91a775ecc67937d8d79c1b1a315748e52157804f18f629c6e1c6332a46255fc6'),
+ ('Linux','x86_64'):('lightpanda-x86_64-linux','ae7d01d261efb9e480e18ce3424533332883863bcf70b12a4321b5733f37e19e'),
+ ('Linux','aarch64'):('lightpanda-aarch64-linux','ac546dfc43c533430da92b75ab36f2a29da7d6324d5d38baf606ef2e0d849345')}
+VERSION='1.0.2'
 def binary():
  key=(platform.system(),platform.machine())
  if key not in ASSETS:raise RuntimeError('此系统没有本练习原生入口。Windows 请在已经安装的 WSL2 内按 Linux 说明运行；不会自动安装 WSL。')
  name,expected=ASSETS[key];p=RUNTIME/name
  if not p.exists():
-  print('下载官方 nightly 快照（锁定 2026-10-31 公布摘要）……',flush=True)
+  print('下载官方固定版 1.0.2，并校验官方公布摘要……',flush=True)
   temp=p.with_suffix('.download')
-  req=urllib.request.Request('https://github.com/lightpanda-io/browser/releases/download/nightly/'+name,headers={'User-Agent':'RepoGo-Lightpanda-Demo/1.0'})
+  req=urllib.request.Request('https://github.com/lightpanda-io/browser/releases/download/1.0.2/'+name,headers={'User-Agent':'RepoGo-Lightpanda-Demo/1.0'})
   with urllib.request.urlopen(req,timeout=120) as src,temp.open('wb') as dst:shutil.copyfileobj(src,dst)
   if hashlib.sha256(temp.read_bytes()).hexdigest()!=expected:
-   temp.unlink();raise RuntimeError('官方 nightly 已滚动或下载损坏，摘要不符，已拒绝执行。请等待本交付的新版本核验；勿跳过校验。')
+   temp.unlink();raise RuntimeError('官方固定包与公布摘要不符，已拒绝执行。请检查下载并等待重新核验；勿跳过校验。')
   temp.replace(p)
  actual=hashlib.sha256(p.read_bytes()).hexdigest()
  if actual!=expected:raise RuntimeError('缓存二进制摘要不符，拒绝执行；不要覆盖预期摘要绕过验证。')
@@ -49,7 +49,7 @@ def main():
    return
   exe,digest=binary();env=os.environ.copy();env.update(LIGHTPANDA_DISABLE_TELEMETRY='true',LIGHTPANDA_DISABLE_CORE_DUMP='1')
   version=subprocess.check_output([str(exe),'version'],env=env,text=True,timeout=15).strip()
-  if version!=VERSION:raise RuntimeError('版本输出与已核验快照不一致：'+version)
+  if version!=VERSION:raise RuntimeError('版本输出与已核验固定版不一致：'+version)
   source=urllib.request.urlopen(url,timeout=5).read().decode();(out/'source.html').write_text(source,encoding='utf-8')
   script='''const page = new Page();
 await page.goto(URL);
